@@ -9,6 +9,7 @@
 #include "dashboard_ui.h"
 #include "mcp_server.h"
 #include "wifi_config.h"
+#include <time.h>         // For NTP time synchronization
 
 DashboardUI dashboard_ui;
 MCPServer mcp_server;
@@ -111,7 +112,36 @@ void setup()
         std::string ipStr = WiFi.localIP().toString().c_str();
         dashboard_ui.console_log("IP: " + ipStr);
         
+        /* Configure NTP and update RTC */
+        dashboard_ui.console_log("Configuring NTP...");
+        configTime(12600, 0, "pool.ntp.org", "time.nist.gov"); // Tehran timezone is UTC+3:30 (12600 seconds)
+        
+        // Wait for NTP synchronization
+        dashboard_ui.console_log("Synchronizing time...");
+        struct tm timeinfo;
+        int attempt = 0;
+        bool timeSet = false;
+        
+        while (!timeSet && attempt < 10) {
+            delay(500);
+            if (getLocalTime(&timeinfo)) {
+                timeSet = true;
+            }
+            attempt++;
+        }
+        
+        if (timeSet) {
+            // Update RTC with NTP time
+            M5StamPLC.setRtcTime(&timeinfo);
+            char timeStr[64];
+            strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
+            dashboard_ui.console_log("RTC updated: " + std::string(timeStr));
+        } else {
+            dashboard_ui.console_log("NTP sync failed!");
+        }
+        
         /* Initialize MCP server */
+        dashboard_ui.console_log("Initializing MCP server...");
         mcp_server.init(&M5StamPLC, &dashboard_ui, MCP_SERVER_PORT);
     } else {
         dashboard_ui.console_log("WiFi connection failed!");

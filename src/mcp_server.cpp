@@ -29,7 +29,7 @@ void MCPServer::init(m5::M5_STAMPLC* stamplc, DashboardUI* ui, int port) {
     _server = new AsyncWebServer(port);
     
     // Log server initialization
-    _dashboard_ui->console_log("Initializing MCP server...");
+    _dashboard_ui->console_log("Initializing...");
     
     // Register all capabilities
     registerCapabilities();
@@ -40,13 +40,12 @@ void MCPServer::init(m5::M5_STAMPLC* stamplc, DashboardUI* ui, int port) {
     
     // Start the server
     _server->begin();
-    
-    // Log server start
-    _dashboard_ui->console_log("MCP server started on port " + std::to_string(port));
-    
+        
     // Log the IP address
     std::string ipStr = WiFi.localIP().toString().c_str();
-    _dashboard_ui->console_log("IP: " + ipStr);
+    _dashboard_ui->console_log("MCP server: ", true);
+    _dashboard_ui->console_log(ipStr, true);
+    _dashboard_ui->console_log("Listening on port " + std::to_string(port), true);
 }
 
 void MCPServer::update() {

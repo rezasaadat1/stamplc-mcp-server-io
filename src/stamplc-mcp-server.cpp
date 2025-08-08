@@ -144,16 +144,13 @@ void setup()
     }
     
     if (WiFi.status() == WL_CONNECTED) {
-        dashboard_ui.console_log("WiFi connected!");
-        std::string ipStr = WiFi.localIP().toString().c_str();
-        dashboard_ui.console_log("IP: " + ipStr);
+        // dashboard_ui.console_log("WiFi connected!");
         
         /* Configure NTP and update RTC */
         dashboard_ui.console_log("Configuring NTP...");
         configTime(12600, 0, "pool.ntp.org", "time.nist.gov"); // Tehran timezone is UTC+3:30 (12600 seconds)
         
         // Wait for NTP synchronization
-        dashboard_ui.console_log("Synchronizing time...");
         struct tm timeinfo;
         int attempt = 0;
         bool timeSet = false;
@@ -169,9 +166,7 @@ void setup()
         if (timeSet) {
             // Update RTC with NTP time
             M5StamPLC.setRtcTime(&timeinfo);
-            char timeStr[64];
-            strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
-            dashboard_ui.console_log("RTC updated: " + std::string(timeStr));
+            dashboard_ui.console_log("NTP Synced", true);
             
             /* Set status light to green for time sync success */
             currentStatusLight = STATUS_TIME_SYNC_SUCCESS;
@@ -187,7 +182,6 @@ void setup()
         }
         
         /* Initialize MCP server */
-        dashboard_ui.console_log("Initializing MCP server...");
         mcp_server.init(&M5StamPLC, &dashboard_ui, MCP_SERVER_PORT);
         
         /* Set the command received callback */
@@ -200,8 +194,8 @@ void setup()
         dashboard_ui.console_log("WiFi connection failed!");
     }
 
-    /* Create a task to write relay regularly */
-    xTaskCreate(task_write_relay_regularly, "relay", 2048, NULL, 15, NULL);
+    /* Relay demo toggle is disabled */
+    // xTaskCreate(task_write_relay_regularly, "relay", 2048, NULL, 15, NULL);
 }
 
 void loop()

@@ -110,7 +110,7 @@ void DashboardUI::render_console_panel()
         _terminal_canvas->setBaseColor(color_inner_pannel);
         _terminal_canvas->fillScreen(color_inner_pannel);
 
-        console_log("Console created :)", false);
+        // console_log("Console created :)", false);
     }
 
     // Update message pop out

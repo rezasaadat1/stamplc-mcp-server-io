@@ -75,4 +75,8 @@ private:
     void handleTone(JsonDocument& params, JsonDocument& result);
     void handleGetTime(JsonDocument& params, JsonDocument& result);
     void handleSetTime(JsonDocument& params, JsonDocument& result);
+    void handleGetTemperature(JsonDocument& params, JsonDocument& result);
+    void handleGetPowerVoltage(JsonDocument& params, JsonDocument& result);
+    void handleGetIoCurrent(JsonDocument& params, JsonDocument& result);
+    void handleGetSensorData(JsonDocument& params, JsonDocument& result);
 };

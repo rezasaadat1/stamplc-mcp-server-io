@@ -133,6 +133,38 @@ void MCPServer::registerCapabilities() {
         {"year", "month", "day", "hour", "minute", "second"},
         std::bind(&MCPServer::handleSetTime, this, std::placeholders::_1, std::placeholders::_2)
     });
+    
+    // Temperature capability
+    _capabilities.push_back({
+        "getTemperature",
+        "Get the current temperature reading",
+        {},
+        std::bind(&MCPServer::handleGetTemperature, this, std::placeholders::_1, std::placeholders::_2)
+    });
+    
+    // Power Voltage capability
+    _capabilities.push_back({
+        "getPowerVoltage",
+        "Get the current power voltage reading",
+        {},
+        std::bind(&MCPServer::handleGetPowerVoltage, this, std::placeholders::_1, std::placeholders::_2)
+    });
+    
+    // IO Current capability
+    _capabilities.push_back({
+        "getIoCurrent",
+        "Get the current IO socket output current reading",
+        {},
+        std::bind(&MCPServer::handleGetIoCurrent, this, std::placeholders::_1, std::placeholders::_2)
+    });
+    
+    // All Sensor Data capability
+    _capabilities.push_back({
+        "getSensorData",
+        "Get all sensor data readings at once (temperature, voltage, current)",
+        {},
+        std::bind(&MCPServer::handleGetSensorData, this, std::placeholders::_1, std::placeholders::_2)
+    });
 }
 
 void MCPServer::setupHttpEndpoints() {
@@ -246,6 +278,12 @@ void MCPServer::setupSSEEndpoints() {
             relays.add(_stamplc->readPlcRelay(i));
         }
         
+        // Add sensor data
+        JsonObject sensors = state.createNestedObject("sensors");
+        sensors["temperature"] = _stamplc->getTemp();
+        sensors["voltage"] = _stamplc->getPowerVoltage();
+        sensors["current"] = _stamplc->getIoSocketOutputCurrent();
+        
         // Add timestamp
         state["timestamp"] = millis();
         
@@ -283,6 +321,12 @@ void MCPServer::broadcastState() {
     for (int i = 0; i < 4; i++) {
         relays.add(_stamplc->readPlcRelay(i));
     }
+    
+    // Add sensor data
+    JsonObject sensors = state.createNestedObject("sensors");
+    sensors["temperature"] = _stamplc->getTemp();
+    sensors["voltage"] = _stamplc->getPowerVoltage();
+    sensors["current"] = _stamplc->getIoSocketOutputCurrent();
     
     // Add timestamp
     state["timestamp"] = millis();
@@ -409,6 +453,12 @@ void MCPServer::handleGetSystemInfo(JsonDocument& params, JsonDocument& result) 
     result["ip"] = WiFi.localIP().toString().c_str();
     result["wifiSSID"] = WiFi.SSID().c_str();
     result["wifiRSSI"] = WiFi.RSSI();
+    
+    // Add sensor readings to the system info
+    JsonObject sensors = result.createNestedObject("sensors");
+    sensors["temperature"] = _stamplc->getTemp();
+    sensors["voltage"] = _stamplc->getPowerVoltage();
+    sensors["current"] = _stamplc->getIoSocketOutputCurrent();
 }
 
 void MCPServer::handleGetIOState(JsonDocument& params, JsonDocument& result) {
@@ -518,4 +568,51 @@ void MCPServer::handleSetTime(JsonDocument& params, JsonDocument& result) {
     
     // Return success
     result["success"] = true;
+}
+
+void MCPServer::handleGetTemperature(JsonDocument& params, JsonDocument& result) {
+    // Get the temperature from M5StamPLC
+    float temperature = _stamplc->getTemp();
+    
+    // Return the result
+    result["temperature"] = temperature;
+    result["unit"] = "Celsius";
+}
+
+void MCPServer::handleGetPowerVoltage(JsonDocument& params, JsonDocument& result) {
+    // Get the power voltage from M5StamPLC
+    float voltage = _stamplc->getPowerVoltage();
+    
+    // Return the result
+    result["voltage"] = voltage;
+    result["unit"] = "Volts";
+}
+
+void MCPServer::handleGetIoCurrent(JsonDocument& params, JsonDocument& result) {
+    // Get the IO socket output current from M5StamPLC
+    float current = _stamplc->getIoSocketOutputCurrent();
+    
+    // Return the result
+    result["current"] = current;
+    result["unit"] = "Amps";
+}
+
+void MCPServer::handleGetSensorData(JsonDocument& params, JsonDocument& result) {
+    // Get all sensor data at once
+    float temperature = _stamplc->getTemp();
+    float voltage = _stamplc->getPowerVoltage();
+    float current = _stamplc->getIoSocketOutputCurrent();
+    
+    // Create a nested sensor object
+    JsonObject sensors = result.createNestedObject("sensors");
+    
+    // Add all sensor readings
+    sensors["temperature"] = temperature;
+    sensors["temperatureUnit"] = "Celsius";
+    
+    sensors["voltage"] = voltage;
+    sensors["voltageUnit"] = "Volts";
+    
+    sensors["current"] = current;
+    sensors["currentUnit"] = "Amps";
 }

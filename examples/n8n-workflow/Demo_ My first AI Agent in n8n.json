@@ -1,0 +1,254 @@
+{
+  "name": "Demo: M5StamPLC MCP AI Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -224,
+        0
+      ],
+      "id": "1de1e153-a391-44e4-a606-5cb3a88f0403",
+      "name": "When chat message received",
+      "webhookId": "a397e9c2-6d3a-46d9-aecf-88166d55c845"
+    },
+    {
+      "parameters": {
+        "agentOptions": {
+          "systemMessage": "You are an intelligent assistant that helps users interact with an M5StamPLC device. The device is connected via the Model Context Protocol (MCP).\n\nThe M5StamPLC has the following capabilities:\n- 8 digital inputs (numbered 0-7)\n- 4 relay outputs (numbered 0-3)\n- Temperature sensor (reports in Celsius)\n- Voltage sensor (reports in Volts)\n- Current sensor (reports in Amps)\n- Real-time clock\n- Buzzer for audio feedback\n- Console display for logging messages\n\nThe device exposes the following MCP methods you can use:\n- readInput: Read the state of a digital input (parameters: inputNumber 0-7)\n- writeRelay: Set the state of a relay (parameters: relayNumber 0-3, state boolean)\n- readRelay: Read the state of a relay (parameters: relayNumber 0-3)\n- consoleLog: Log a message to the device console (parameters: message)\n- getSystemInfo: Get information about the system (no parameters)\n- getIOState: Get the state of all inputs and relays (no parameters)\n- tone: Play a tone with specified frequency and duration (parameters: frequency 0-20000, duration 0-10000)\n- getTime: Get the current time from the RTC (no parameters)\n- setTime: Set the RTC time (parameters: year, month, day, hour, minute, second)\n- getTemperature: Get the current temperature reading (no parameters)\n- getPowerVoltage: Get the current power voltage reading (no parameters)\n- getIoCurrent: Get the current IO socket output current reading (no parameters)\n- getSensorData: Get all sensor data readings at once (no parameters)\n\nYou will receive real-time updates from the device through an SSE connection. These updates include the state of all inputs, relays, and sensor readings.\n\nHelp the user monitor and control their M5StamPLC by utilizing these MCP methods. Be concise and helpful in your responses.",
+          "maxIterations": 10,
+          "returnIntermediateSteps": true
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "50137716-f29a-4c98-b735-d96d0a7e00ae",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "gemma3:4b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        192
+      ],
+      "id": "17983011-26ce-41c6-9471-cf65451b1bbb",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "1ZBBZ42EVCP6ooEQ",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "windowSize": 10,
+          "memoryKey": "chat_history",
+          "returnMessages": true,
+          "inputKey": "input",
+          "outputKey": "output",
+          "contextSizeThreshold": 4000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        64,
+        192
+      ],
+      "id": "84ef4a3d-74b2-42cf-9551-fb16a833e5e1",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "httpEndpoint": "http://192.168.1.236/mcp",
+        "sseEndpoint": "http://192.168.1.236/events",
+        "options": {
+          "capabilities": [
+            {
+              "name": "readInput",
+              "description": "Read the state of a digital input",
+              "parameters": [
+                {
+                  "name": "inputNumber",
+                  "type": "integer",
+                  "description": "The number of the input to read (0-7)"
+                }
+              ]
+            },
+            {
+              "name": "writeRelay",
+              "description": "Set the state of a relay",
+              "parameters": [
+                {
+                  "name": "relayNumber",
+                  "type": "integer",
+                  "description": "The number of the relay to control (0-3)"
+                },
+                {
+                  "name": "state",
+                  "type": "boolean",
+                  "description": "The state to set the relay to (true=on, false=off)"
+                }
+              ]
+            },
+            {
+              "name": "readRelay",
+              "description": "Read the state of a relay",
+              "parameters": [
+                {
+                  "name": "relayNumber",
+                  "type": "integer",
+                  "description": "The number of the relay to read (0-3)"
+                }
+              ]
+            },
+            {
+              "name": "consoleLog",
+              "description": "Log a message to the device console",
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": "string",
+                  "description": "The message to log to the console"
+                }
+              ]
+            },
+            {
+              "name": "getSystemInfo",
+              "description": "Get information about the system",
+              "parameters": []
+            },
+            {
+              "name": "getIOState",
+              "description": "Get the state of all inputs and relays",
+              "parameters": []
+            },
+            {
+              "name": "tone",
+              "description": "Play a tone with specified frequency and duration",
+              "parameters": [
+                {
+                  "name": "frequency",
+                  "type": "integer",
+                  "description": "The frequency in Hz (0-20000)"
+                },
+                {
+                  "name": "duration",
+                  "type": "integer",
+                  "description": "The duration in milliseconds (0-10000)"
+                }
+              ]
+            },
+            {
+              "name": "getTime",
+              "description": "Get the current time from the RTC",
+              "parameters": []
+            },
+            {
+              "name": "getTemperature",
+              "description": "Get the current temperature reading",
+              "parameters": []
+            },
+            {
+              "name": "getPowerVoltage",
+              "description": "Get the current power voltage reading",
+              "parameters": []
+            },
+            {
+              "name": "getIoCurrent",
+              "description": "Get the current IO socket output current reading",
+              "parameters": []
+            },
+            {
+              "name": "getSensorData",
+              "description": "Get all sensor data readings at once",
+              "parameters": []
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        272,
+        192
+      ],
+      "id": "36c9a29a-e999-4a92-bd57-aa14163acd01",
+      "name": "MCP Client"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "ffba9201-ddc4-4c61-8f2d-d3e0d173c8b8",
+  "meta": {
+    "templateId": "self-building-ai-agent",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "db95f8c383a58aecc19da5de04d1f19a5071bc61e9d47a0726ebe338858fc192"
+  },
+  "id": "vF9ahtPyBa09zvIJ",
+  "tags": []
+}

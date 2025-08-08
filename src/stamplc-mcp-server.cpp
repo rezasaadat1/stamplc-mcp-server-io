@@ -5,9 +5,13 @@
  */
 #include <Arduino.h>
 #include <M5StamPLC.h>
+#include <WiFi.h>
 #include "dashboard_ui.h"
+#include "mcp_server.h"
+#include "wifi_config.h"
 
 DashboardUI dashboard_ui;
+MCPServer mcp_server;
 
 void update_time_and_date()
 {
@@ -91,6 +95,28 @@ void setup()
     /* Init dashboard UI */
     dashboard_ui.init(&M5StamPLC.Display);
 
+    /* Connect to WiFi */
+    dashboard_ui.console_log("Connecting to WiFi...");
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    
+    int attempt = 0;
+    while (WiFi.status() != WL_CONNECTED && attempt < 20) {
+        delay(500);
+        dashboard_ui.console_log(".", false);
+        attempt++;
+    }
+    
+    if (WiFi.status() == WL_CONNECTED) {
+        dashboard_ui.console_log("WiFi connected!");
+        std::string ipStr = WiFi.localIP().toString().c_str();
+        dashboard_ui.console_log("IP: " + ipStr);
+        
+        /* Initialize MCP server */
+        mcp_server.init(&M5StamPLC, &dashboard_ui, MCP_SERVER_PORT);
+    } else {
+        dashboard_ui.console_log("WiFi connection failed!");
+    }
+
     /* Create a task to write relay regularly */
     xTaskCreate(task_write_relay_regularly, "relay", 2048, NULL, 15, NULL);
 }
@@ -102,6 +128,11 @@ void loop()
     update_time_and_date();
     update_button_events();
     update_plc_io_state();
+    
+    /* Update MCP server */
+    if (WiFi.status() == WL_CONNECTED) {
+        mcp_server.update();
+    }
 
     /* Render dashboard UI */
     dashboard_ui.render();

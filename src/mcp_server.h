@@ -31,6 +31,12 @@ public:
     // MCP specific methods
     void registerCapabilities();
     void handleJsonRPC(JsonDocument& request, JsonDocument& response);
+    
+    // Set command received callback function
+    typedef std::function<void()> CommandReceivedCallback;
+    void setCommandReceivedCallback(CommandReceivedCallback callback) {
+        _commandReceivedCallback = callback;
+    }
 
 private:
     // MCP Server capabilities
@@ -55,6 +61,9 @@ private:
     
     // SSE event queue management
     std::queue<std::string> _event_queue;
+    
+    // Command received callback
+    CommandReceivedCallback _commandReceivedCallback = nullptr;
     
     // Capability handlers
     void handleReadInput(JsonDocument& params, JsonDocument& result);

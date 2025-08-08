@@ -14,6 +14,38 @@
 DashboardUI dashboard_ui;
 MCPServer mcp_server;
 
+// Status light states
+enum StatusLightState {
+    STATUS_WIFI_DISCONNECTED,   // Red
+    STATUS_TIME_SYNC_SUCCESS,   // Green
+    STATUS_NORMAL_OPERATION,    // White
+    STATUS_INCOMING_COMMAND     // Blue
+};
+
+StatusLightState currentStatusLight = STATUS_WIFI_DISCONNECTED;
+uint32_t lastCommandTime = 0;  // Track when the last command was received
+
+void updateStatusLight() {
+    switch (currentStatusLight) {
+        case STATUS_WIFI_DISCONNECTED:
+            // Red
+            M5StamPLC.setStatusLight(1, 0, 0);
+            break;
+        case STATUS_TIME_SYNC_SUCCESS:
+            // Green
+            M5StamPLC.setStatusLight(0, 1, 0);
+            break;
+        case STATUS_NORMAL_OPERATION:
+            // White
+            M5StamPLC.setStatusLight(1, 1, 1);
+            break;
+        case STATUS_INCOMING_COMMAND:
+            // Blue
+            M5StamPLC.setStatusLight(0, 0, 1);
+            break;
+    }
+}
+
 void update_time_and_date()
 {
     static uint32_t time_count = 0;
@@ -96,6 +128,10 @@ void setup()
     /* Init dashboard UI */
     dashboard_ui.init(&M5StamPLC.Display);
 
+    /* Set initial status light to red (not connected to WiFi) */
+    currentStatusLight = STATUS_WIFI_DISCONNECTED;
+    updateStatusLight();
+
     /* Connect to WiFi */
     dashboard_ui.console_log("Connecting to WiFi...");
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -136,13 +172,30 @@ void setup()
             char timeStr[64];
             strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
             dashboard_ui.console_log("RTC updated: " + std::string(timeStr));
+            
+            /* Set status light to green for time sync success */
+            currentStatusLight = STATUS_TIME_SYNC_SUCCESS;
+            updateStatusLight();
+            
+            /* After brief pause, transition to normal operation (white) */
+            delay(3000);
+            currentStatusLight = STATUS_NORMAL_OPERATION;
+            updateStatusLight();
         } else {
             dashboard_ui.console_log("NTP sync failed!");
+            /* Keep the status light blue if time sync failed */
         }
         
         /* Initialize MCP server */
         dashboard_ui.console_log("Initializing MCP server...");
         mcp_server.init(&M5StamPLC, &dashboard_ui, MCP_SERVER_PORT);
+        
+        /* Set the command received callback */
+        mcp_server.setCommandReceivedCallback([]() {
+            currentStatusLight = STATUS_INCOMING_COMMAND;
+            updateStatusLight();
+            lastCommandTime = millis();
+        });
     } else {
         dashboard_ui.console_log("WiFi connection failed!");
     }
@@ -159,9 +212,27 @@ void loop()
     update_button_events();
     update_plc_io_state();
     
-    /* Update MCP server */
-    if (WiFi.status() == WL_CONNECTED) {
+    /* Check if we need to revert from command status to normal */
+    if (currentStatusLight == STATUS_INCOMING_COMMAND && (millis() - lastCommandTime > 500)) {
+        currentStatusLight = STATUS_NORMAL_OPERATION;
+        updateStatusLight();
+    }
+    
+    /* Check WiFi status and update status light if needed */
+    if (WiFi.status() != WL_CONNECTED && currentStatusLight != STATUS_WIFI_DISCONNECTED) {
+        currentStatusLight = STATUS_WIFI_DISCONNECTED;
+        updateStatusLight();
+        dashboard_ui.console_log("WiFi disconnected");
+    } else if (WiFi.status() == WL_CONNECTED) {
+        /* Update MCP server */
         mcp_server.update();
+        
+        /* If WiFi reconnected but status light shows disconnected, reset to normal operation */
+        if (currentStatusLight == STATUS_WIFI_DISCONNECTED) {
+            currentStatusLight = STATUS_NORMAL_OPERATION;
+            updateStatusLight();
+            dashboard_ui.console_log("WiFi reconnected");
+        }
     }
 
     /* Render dashboard UI */

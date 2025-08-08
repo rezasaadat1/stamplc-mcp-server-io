@@ -308,6 +308,11 @@ void MCPServer::handleJsonRPC(JsonDocument& request, JsonDocument& response) {
     // Get the method name
     String methodName = request["method"].as<String>();
     
+    // Notify about incoming command
+    if (_commandReceivedCallback) {
+        _commandReceivedCallback();
+    }
+    
     // Find the capability
     bool found = false;
     for (const auto& capability : _capabilities) {
